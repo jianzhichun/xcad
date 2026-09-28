@@ -152,7 +152,11 @@ namespace Xarial.XCad.SwDocumentManager
 
         [FileRevision(19000)]
         [ReleaseYear(2026)]
-        Sw2026 = 34
+        Sw2026 = 34,
+
+        [FileRevision(20000)]
+        [ReleaseYear(2027)]
+        Sw2027 = 35
     }
 
     public interface ISwDmVersion : IXVersion
