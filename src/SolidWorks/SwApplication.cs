@@ -46,6 +46,12 @@ namespace Xarial.XCad.SolidWorks
     public interface ISwApplication : IXApplication, IDisposable
     {
         ISldWorks Sw { get; }
+
+        /// <summary>
+        /// Releases this wrapper without closing the attached application or its documents.
+        /// </summary>
+        void Detach();
+
         new ISwVersion Version { get; set; }
 
         IXServiceCollection CustomServices { get; set; }
@@ -527,8 +533,7 @@ namespace Xarial.XCad.SolidWorks
 
         private ApplicationState_e GetApplicationState() 
         {
-            //TODO: find the state
-            return ApplicationState_e.Default;
+            return Sw.Visible ? ApplicationState_e.Default : ApplicationState_e.Hidden;
         }
 
         public IXProgress CreateProgress()
@@ -621,6 +626,8 @@ namespace Xarial.XCad.SolidWorks
                 }
             }
         }
+
+        public void Detach() => Release(false);
 
         public void Dispose() => Release(true);
 
