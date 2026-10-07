@@ -26,6 +26,17 @@ namespace Xarial.XCad.SolidWorks.Data
 {
     public interface ISwCustomProperty : IXProperty
     {
+        /// <summary>
+        /// Result of the last non-cached typed read of this property.
+        /// </summary>
+        /// <remarks>
+        /// Unlike <see cref="IXProperty.Value"/> (which may serve cached data and
+        /// drops resolution flags), this structure always issues a fresh Get6 call
+        /// and reports presence, raw expression, resolved value, resolution state
+        /// and link-to-property flag separately, so callers can distinguish
+        /// missing, blank, unresolved and linked properties.
+        /// </remarks>
+        CustomPropertyReadResult ReadFresh();
     }
 
     [DebuggerDisplay("{" +nameof(Name) + "} = {" + nameof(Value) + "} ({" + nameof(Expression) + "})")]
@@ -113,6 +124,44 @@ namespace Xarial.XCad.SolidWorks.Data
         }
 
         private EventsHandler<PropertyValueChangedDelegate> m_CustomPropertyChangeEventsHandler;
+
+        public CustomPropertyReadResult ReadFresh()
+        {
+            if (!IsCommitted)
+            {
+                throw new InvalidOperationException("Cannot read a property which is not committed");
+            }
+
+            const int notPresent = (int)swCustomInfoGetResult_e.swCustomInfoGetResult_NotPresent;
+
+            string raw;
+            string resolved;
+            bool wasResolved;
+            bool linkToProperty = false;
+
+            int status;
+
+            if (m_App.IsVersionNewerOrEqual(SwVersion_e.Sw2018))
+            {
+                status = PrpMgr.Get6(Name, false, out raw, out resolved,
+                    out wasResolved, out linkToProperty);
+            }
+            else if (m_App.IsVersionNewerOrEqual(SwVersion_e.Sw2014))
+            {
+                status = PrpMgr.Get5(Name, false, out raw, out resolved, out wasResolved);
+            }
+            else
+            {
+                var names = PrpMgr.GetNames() as string[] ?? new string[0];
+                var present = names.Contains(Name, StringComparer.CurrentCultureIgnoreCase);
+                status = present ? 0 : notPresent;
+                raw = present ? PrpMgr.Get(Name) as string : null;
+                resolved = raw;
+                wasResolved = false;
+            }
+
+            return new CustomPropertyReadResult(status == notPresent, raw, resolved, wasResolved, linkToProperty);
+        }
 
         protected virtual ICustomPropertyManager PrpMgr { get; }
         

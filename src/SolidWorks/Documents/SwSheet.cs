@@ -18,10 +18,12 @@ using System.Threading;
 using Xarial.XCad.Base.Enums;
 using Xarial.XCad.Data;
 using Xarial.XCad.Documents;
+using Xarial.XCad.Annotations;
 using Xarial.XCad.Documents.Enums;
 using Xarial.XCad.Documents.Structures;
 using Xarial.XCad.Features;
 using Xarial.XCad.Services;
+using Xarial.XCad.SolidWorks.Annotations;
 using Xarial.XCad.SolidWorks.Documents.Exceptions;
 using Xarial.XCad.SolidWorks.Features;
 using Xarial.XCad.SolidWorks.Sketch;
@@ -33,6 +35,12 @@ namespace Xarial.XCad.SolidWorks.Documents
     public interface ISwSheet : ISwSelObject, IXSheet
     {
         ISheet Sheet { get; }
+
+        /// <summary>
+        /// Notes living directly on the sheet (sheet-format/title-block space),
+        /// including the sheet pseudo-view that sheet.Annotations skips.
+        /// </summary>
+        IEnumerable<ISwNote> Notes { get; }
     }
 
     [DebuggerDisplay("{" + nameof(Name) + "}")]
@@ -74,6 +82,10 @@ namespace Xarial.XCad.SolidWorks.Documents
         }
 
         public IXDrawingViewRepository DrawingViews => m_DrawingViews;
+
+        public IEnumerable<ISwNote> Notes => SheetNotesHelper.GetSheetNotes(
+            m_Drawing.Drawing.GetViews() as object[], Sheet.GetName(), IsCommitted,
+            (note) => new SwNote(note, m_Drawing, OwnerApplication));
 
         public override bool IsCommitted => m_Creator.IsCreated;
 
@@ -442,6 +454,7 @@ namespace Xarial.XCad.SolidWorks.Documents
         #region Not Supported
         public string Name { get => throw new UnloadedDocumentPreviewOnlySheetException(); set => throw new UnloadedDocumentPreviewOnlySheetException(); }
         public IXDrawingViewRepository DrawingViews => throw new UnloadedDocumentPreviewOnlySheetException();
+        public IEnumerable<ISwNote> Notes => throw new UnloadedDocumentPreviewOnlySheetException();
         public void Commit(CancellationToken cancellationToken)
             => throw new UnloadedDocumentPreviewOnlySheetException();
         public void Select(bool append)
